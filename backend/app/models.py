@@ -62,6 +62,70 @@ class UserPublic(UserBase):
     created_at: datetime | None = None
 
 
+class RoomBase(SQLModel):
+    name: str = Field(max_length=255)
+
+
+class RoomCreate(RoomBase):
+    pass
+
+
+class Room(RoomBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    mediasoup_router_id: str | None = Field(
+        default=None, max_length=255, unique=True, index=True
+    )
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class RoomParticipant(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    room_id: uuid.UUID = Field(foreign_key="room.id", index=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    mediasoup_send_transport_id: str | None = Field(default=None, max_length=255)
+    webcam_producer_id: str | None = Field(default=None, max_length=255)
+    audio_producer_id: str | None = Field(default=None, max_length=255)
+    screen_producer_id: str | None = Field(default=None, max_length=255)
+    joined_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    left_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class StaffMonitor(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    room_id: uuid.UUID = Field(foreign_key="room.id", index=True)
+    staff_user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    mediasoup_recv_transport_id: str | None = Field(default=None, max_length=255)
+    joined_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    left_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class RoomPublic(RoomBase):
+    id: uuid.UUID
+    mediasoup_router_id: str | None = None
+    created_at: datetime | None = None
+    active_student_count: int = 0
+
+
+class RoomsPublic(SQLModel):
+    data: list[RoomPublic]
+    count: int
+
+
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int

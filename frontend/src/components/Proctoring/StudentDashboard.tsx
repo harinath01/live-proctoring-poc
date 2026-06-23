@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router"
+import { useQuery } from "@tanstack/react-query"
 import { ExternalLink } from "lucide-react"
 
-import { mockRooms } from "@/components/Proctoring/mockRooms"
+import { listProctoringRooms } from "@/components/Proctoring/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +14,13 @@ import {
 } from "@/components/ui/card"
 
 export function StudentDashboard() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["proctoring-rooms"],
+    queryFn: listProctoringRooms,
+  })
+
+  const rooms = data?.data ?? []
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -22,19 +30,47 @@ export function StudentDashboard() {
         </p>
       </div>
 
+      {isLoading ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Loading rooms...
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {error ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-destructive">
+            {error.message}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {!isLoading && !error && rooms.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            No rooms are available yet.
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {mockRooms.map((room) => (
+        {rooms.map((room) => (
           <Card key={room.id}>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-lg">{room.name}</CardTitle>
                 <Badge
-                  variant={room.status === "active" ? "default" : "secondary"}
+                  variant={room.active_student_count > 0 ? "default" : "secondary"}
                 >
-                  {room.status}
+                  {room.active_student_count > 0 ? "active" : "scheduled"}
                 </Badge>
               </div>
-              <CardDescription>{room.scheduleLabel}</CardDescription>
+              <CardDescription>
+                {room.active_student_count > 0
+                  ? `${room.active_student_count} student${room.active_student_count === 1 ? "" : "s"} connected`
+                  : "No students connected yet"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground text-sm leading-6">

@@ -4,7 +4,8 @@
   "private": true,
   "description": "Minimal Node.js HTTP service placeholder for future mediasoup APIs",
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "mediasoup": "^3.20.9"
   },
   "scripts": {
     "start": "node server.js"

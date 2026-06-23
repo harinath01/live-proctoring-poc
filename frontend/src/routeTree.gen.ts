@@ -18,6 +18,7 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutRoomsRoomIdRouteImport } from './routes/_layout/rooms.$roomId'
+import { Route as LayoutMonitorRoomIdRouteImport } from './routes/_layout/monitor.$roomId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -63,6 +64,11 @@ const LayoutRoomsRoomIdRoute = LayoutRoomsRoomIdRouteImport.update({
   path: '/rooms/$roomId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMonitorRoomIdRoute = LayoutMonitorRoomIdRouteImport.update({
+  id: '/monitor/$roomId',
+  path: '/monitor/$roomId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
+  '/monitor/$roomId': typeof LayoutMonitorRoomIdRoute
   '/rooms/$roomId': typeof LayoutRoomsRoomIdRoute
 }
 export interface FileRoutesByTo {
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/monitor/$roomId': typeof LayoutMonitorRoomIdRoute
   '/rooms/$roomId': typeof LayoutRoomsRoomIdRoute
 }
 export interface FileRoutesById {
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/monitor/$roomId': typeof LayoutMonitorRoomIdRoute
   '/_layout/rooms/$roomId': typeof LayoutRoomsRoomIdRoute
 }
 export interface FileRouteTypes {
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/settings'
+    | '/monitor/$roomId'
     | '/rooms/$roomId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/settings'
     | '/'
+    | '/monitor/$roomId'
     | '/rooms/$roomId'
   id:
     | '__root__'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/monitor/$roomId'
     | '/_layout/rooms/$roomId'
   fileRoutesById: FileRoutesById
 }
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutRoomsRoomIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/monitor/$roomId': {
+      id: '/_layout/monitor/$roomId'
+      path: '/monitor/$roomId'
+      fullPath: '/monitor/$roomId'
+      preLoaderRoute: typeof LayoutMonitorRoomIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -210,6 +229,7 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutMonitorRoomIdRoute: typeof LayoutMonitorRoomIdRoute
   LayoutRoomsRoomIdRoute: typeof LayoutRoomsRoomIdRoute
 }
 
@@ -217,6 +237,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutMonitorRoomIdRoute: LayoutMonitorRoomIdRoute,
   LayoutRoomsRoomIdRoute: LayoutRoomsRoomIdRoute,
 }
 

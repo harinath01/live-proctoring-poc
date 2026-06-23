@@ -1,9 +1,18 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft, MessageSquareMore, Monitor, ShieldAlert, Video } from "lucide-react"
 import { type RefObject, useEffect, useRef, useState } from "react"
 
+import {
+  getProctoringRoom,
+  joinProctoringRoom,
+} from "@/components/Proctoring/api"
+import {
+  createDeviceForRoom,
+  publishStudentStreams,
+  type StudentPublishingSession,
+} from "@/components/Proctoring/mediasoup"
 import { MediaPermissionDialog } from "@/components/Proctoring/MediaPermissionDialog"
-import { getMockRoomById } from "@/components/Proctoring/mockRooms"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,20 +26,11 @@ import { Input } from "@/components/ui/input"
 import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/rooms/$roomId")({
-  loader: ({ params }) => {
-    const room = getMockRoomById(params.roomId)
-
-    if (!room) {
-      throw redirect({ to: "/" })
-    }
-
-    return { room }
-  },
   component: StudentRoomPage,
-  head: ({ loaderData }) => ({
+  head: () => ({
     meta: [
       {
-        title: `${loaderData?.room.name ?? "Room"} - Live Proctoring`,
+        title: "Room - Live Proctoring",
       },
     ],
   }),
@@ -38,11 +38,15 @@ export const Route = createFileRoute("/_layout/rooms/$roomId")({
 
 function StudentRoomPage() {
   const { user: currentUser } = useAuth()
-  const { room } = Route.useLoaderData()
+  const { roomId } = Route.useParams()
   const navigate = Route.useNavigate()
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(true)
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null)
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
+  const [publishingStatus, setPublishingStatus] = useState<
+    "idle" | "starting" | "active" | "error"
+  >("idle")
+  const [publishingError, setPublishingError] = useState<string | null>(null)
   const [replyText, setReplyText] = useState("")
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -60,12 +64,71 @@ function StudentRoomPage() {
   ])
   const webcamVideoRef = useRef<HTMLVideoElement | null>(null)
   const screenVideoRef = useRef<HTMLVideoElement | null>(null)
+  const publishingStartedRef = useRef(false)
+  const publishingSessionRef = useRef<StudentPublishingSession | null>(null)
+  const {
+    data: room,
+    isLoading: isRoomLoading,
+    error: roomError,
+  } = useQuery({
+    queryKey: ["proctoring-room", roomId],
+    queryFn: () => getProctoringRoom(roomId),
+  })
+  const joinRoomMutation = useMutation({
+    mutationFn: () => joinProctoringRoom(roomId),
+  })
 
   useEffect(() => {
     if (currentUser?.is_superuser || currentUser?.role === "staff") {
       void navigate({ to: "/" })
     }
   }, [currentUser, navigate])
+
+  useEffect(() => {
+    if (!currentUser || currentUser.is_superuser || currentUser.role === "staff") {
+      return
+    }
+    if (!room || joinRoomMutation.isSuccess || joinRoomMutation.isPending) {
+      return
+    }
+    joinRoomMutation.mutate()
+  }, [currentUser, joinRoomMutation, room])
+
+  useEffect(() => {
+    async function startPublishing() {
+      if (
+        !room ||
+        !webcamStream ||
+        !screenStream ||
+        !joinRoomMutation.isSuccess ||
+        publishingStartedRef.current
+      ) {
+        return
+      }
+
+      publishingStartedRef.current = true
+      setPublishingStatus("starting")
+      setPublishingError(null)
+
+      try {
+        const device = await createDeviceForRoom(room.id)
+        const session = await publishStudentStreams(room.id, device, {
+          webcamStream,
+          screenStream,
+        })
+        publishingSessionRef.current = session
+        setPublishingStatus("active")
+      } catch (error) {
+        publishingStartedRef.current = false
+        setPublishingStatus("error")
+        setPublishingError(
+          error instanceof Error ? error.message : "Failed to publish media"
+        )
+      }
+    }
+
+    void startPublishing()
+  }, [joinRoomMutation.isSuccess, room, screenStream, webcamStream])
 
   useEffect(() => {
     const webcamVideoTrack = webcamStream?.getVideoTracks()[0]
@@ -90,6 +153,10 @@ function StudentRoomPage() {
 
   useEffect(() => {
     return () => {
+      publishingSessionRef.current?.audioProducer?.close()
+      publishingSessionRef.current?.videoProducer?.close()
+      publishingSessionRef.current?.screenProducer?.close()
+      publishingSessionRef.current?.sendTransport.close()
       webcamStream?.getTracks().forEach((track) => track.stop())
       screenStream?.getTracks().forEach((track) => track.stop())
     }
@@ -130,6 +197,23 @@ function StudentRoomPage() {
 
   return (
     <>
+      {isRoomLoading ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">
+            Loading room...
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {roomError ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-destructive">
+            {roomError.message}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {!isRoomLoading && !roomError && room ? (
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -180,10 +264,31 @@ function StudentRoomPage() {
                   label="Screen"
                   value={screenStream ? "Connected" : "Awaiting"}
                 />
+                <StatusPill
+                  icon={Video}
+                  label="Publishing"
+                  value={
+                    publishingStatus === "active"
+                      ? "Live"
+                      : publishingStatus === "starting"
+                        ? "Starting"
+                        : publishingStatus === "error"
+                          ? "Error"
+                          : "Pending"
+                  }
+                />
               </div>
             </div>
           </CardHeader>
         </Card>
+
+        {publishingError ? (
+          <Card>
+            <CardContent className="py-4 text-sm text-destructive">
+              {publishingError}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <Card className="h-full">
@@ -264,17 +369,18 @@ function StudentRoomPage() {
           </Card>
         </div>
       </div>
+      ) : null}
 
       <MediaPermissionDialog
         open={permissionDialogOpen}
         onOpenChange={setPermissionDialogOpen}
-        roomName={room.name}
+        roomName={room?.name}
         onComplete={({ webcamStream, screenStream }) => {
           setWebcamStream(webcamStream)
           setScreenStream(screenStream)
           console.log("Student media permissions granted", {
-            roomId: room.id,
-            roomName: room.name,
+            roomId: room?.id,
+            roomName: room?.name,
             webcamTracks: webcamStream.getTracks().map((track) => track.kind),
             screenTracks: screenStream.getTracks().map((track) => track.kind),
           })
