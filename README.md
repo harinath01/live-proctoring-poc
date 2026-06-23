@@ -20,6 +20,9 @@ docker compose watch
 # Run database migrations only
 docker compose run --rm prestart
 
+# Seed the first superuser (admin@example.com / Welcome1$)
+docker compose run --rm backend bash -c "uv run python -m app.initial_data"
+
 # View logs
 docker compose logs -f          # all services
 docker compose logs -f backend  # specific service
