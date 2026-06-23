@@ -1,0 +1,15 @@
+{
+  "name": "mediasoup-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal Node.js HTTP service placeholder for future mediasoup APIs",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -136,6 +136,40 @@ services:
       # Enable redirection for HTTP and HTTPS
       - traefik.http.routers.${STACK_NAME?Variable not set}-backend-http.middlewares=https-redirect
 
+  mediasoup-server:
+    build:
+      context: .
+      dockerfile: mediasoup-server/Dockerfile
+    restart: always
+    networks:
+      - traefik-public
+      - default
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+
+      - traefik.http.services.${STACK_NAME?Variable not set}-mediasoup.loadbalancer.server.port=3000
+
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-http.rule=Host(`mediasoup.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-http.entrypoints=http
+
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-https.rule=Host(`mediasoup.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-https.tls=true
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-https.tls.certresolver=le
+
+      # Enable redirection for HTTP and HTTPS
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mediasoup-http.middlewares=https-redirect
+
   frontend:
     image: '${DOCKER_IMAGE_FRONTEND?Variable not set}:${TAG-latest}'
     restart: always
