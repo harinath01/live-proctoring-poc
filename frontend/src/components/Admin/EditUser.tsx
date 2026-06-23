@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -41,6 +48,7 @@ const formSchema = z
       .optional()
       .or(z.literal("")),
     confirm_password: z.string().optional(),
+    role: z.enum(["student", "staff"]),
     is_superuser: z.boolean().optional(),
     is_active: z.boolean().optional(),
   })
@@ -68,6 +76,7 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
     defaultValues: {
       email: user.email,
       full_name: user.full_name ?? undefined,
+      role: (user.role as "student" | "staff") ?? "student",
       is_superuser: user.is_superuser,
       is_active: user.is_active,
     },
@@ -181,6 +190,31 @@ const EditUser = ({ user, onSuccess }: EditUserProps) => {
                         {...field}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

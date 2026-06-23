@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -42,6 +49,7 @@ const formSchema = z
     confirm_password: z
       .string()
       .min(1, { message: "Please confirm your password" }),
+    role: z.enum(["student", "staff"]),
     is_superuser: z.boolean(),
     is_active: z.boolean(),
   })
@@ -66,6 +74,7 @@ const AddUser = () => {
       full_name: "",
       password: "",
       confirm_password: "",
+      role: "student",
       is_superuser: false,
       is_active: false,
     },
@@ -180,6 +189,31 @@ const AddUser = () => {
                         required
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="student">Student</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

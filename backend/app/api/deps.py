@@ -55,3 +55,15 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+def require_role(required_role: str):
+    def role_checker(current_user: CurrentUser) -> User:
+        if not current_user.is_superuser and current_user.role != required_role:
+            raise HTTPException(
+                status_code=403,
+                detail=f"The user doesn't have the required role: {required_role}",
+            )
+        return current_user
+
+    return role_checker
