@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, MessageSquareMore, Monitor, ShieldAlert, Video } from "lucide-react"
 import { type RefObject, useEffect, useRef, useState } from "react"
 
 import { MediaPermissionDialog } from "@/components/Proctoring/MediaPermissionDialog"
@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/rooms/$roomId")({
@@ -42,6 +43,21 @@ function StudentRoomPage() {
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(true)
   const [webcamStream, setWebcamStream] = useState<MediaStream | null>(null)
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null)
+  const [replyText, setReplyText] = useState("")
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: "proctor-1",
+      sender: "proctor",
+      body: "Your session is being monitored. Keep your face visible at all times.",
+      timestamp: "10:02 AM",
+    },
+    {
+      id: "proctor-2",
+      sender: "proctor",
+      body: "If you face a technical issue, reply here before leaving the room.",
+      timestamp: "10:03 AM",
+    },
+  ])
   const webcamVideoRef = useRef<HTMLVideoElement | null>(null)
   const screenVideoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -91,6 +107,27 @@ function StudentRoomPage() {
     }
   }, [screenStream])
 
+  function handleSendReply() {
+    const trimmedReply = replyText.trim()
+    if (!trimmedReply) {
+      return
+    }
+
+    setChatMessages((currentMessages) => [
+      ...currentMessages,
+      {
+        id: `student-${Date.now()}`,
+        sender: "student",
+        body: trimmedReply,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ])
+    setReplyText("")
+  }
+
   return (
     <>
       <div className="flex flex-col gap-6">
@@ -98,8 +135,8 @@ function StudentRoomPage() {
           <div>
             <h1 className="max-w-2xl truncate text-2xl">{room.name}</h1>
             <p className="text-muted-foreground">
-              This room is currently monitoring your webcam feed and screen
-              share for proctoring.
+              This room is currently monitoring your webcam feed, audio, and
+              screen share for proctoring.
             </p>
           </div>
           <Button asChild variant="outline">
@@ -110,38 +147,122 @@ function StudentRoomPage() {
           </Button>
         </div>
 
-        <Card className="border-2">
-          <CardHeader className="gap-4 text-center">
-            <div className="flex justify-center">
-              <Badge className="rounded-full px-3 py-1" variant="secondary">
-                Live Proctoring Active
-              </Badge>
+        <Card>
+          <CardHeader className="gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary">Live Proctoring</Badge>
+              <Badge variant="outline">Session active</Badge>
             </div>
-            <CardTitle className="text-3xl">
-              You are being proctored during this session
-            </CardTitle>
-            <CardDescription className="mx-auto max-w-2xl text-base leading-7">
-              Keep your webcam with audio and your full screen available while
-              you remain in this room. If either video track ends, we currently
-              log that event so we can wire the next step of the flow.
-            </CardDescription>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <CardTitle className="text-3xl">
+                  You are being proctored during this session
+                </CardTitle>
+                <CardDescription className="max-w-3xl text-base leading-7">
+                  Keep your webcam with audio and your full screen available
+                  throughout the exam. If either video track ends, we currently
+                  log that event while we wire the next part of the flow.
+                </CardDescription>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3 lg:w-[420px]">
+                <StatusPill
+                  icon={ShieldAlert}
+                  label="Monitoring"
+                  value="Webcam + screen required"
+                />
+                <StatusPill
+                  icon={Video}
+                  label="Webcam"
+                  value={webcamStream ? "Connected" : "Awaiting"}
+                />
+                <StatusPill
+                  icon={Monitor}
+                  label="Screen"
+                  value={screenStream ? "Connected" : "Awaiting"}
+                />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="flex flex-col items-center gap-4">
-            <div className="grid w-full gap-4 lg:grid-cols-2">
-              <PreviewTile
-                label="Webcam + Audio"
-                stream={webcamStream}
-                videoRef={webcamVideoRef}
-                muted
-              />
-              <PreviewTile
-                label="Screen Share"
-                stream={screenStream}
-                videoRef={screenVideoRef}
-              />
-            </div>
-          </CardContent>
         </Card>
+
+        <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <Card className="h-full">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl">Candidate Capture Surfaces</CardTitle>
+                  <CardDescription>
+                    Live previews update here after the required permissions are granted.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">Student view</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid h-full gap-4 lg:grid-cols-2">
+                <PreviewTile
+                  label="Webcam + Audio"
+                  stream={webcamStream}
+                  videoRef={webcamVideoRef}
+                  muted
+                />
+                <PreviewTile
+                  label="Screen Share"
+                  stream={screenStream}
+                  videoRef={screenVideoRef}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="flex h-full min-h-[620px] flex-col">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquareMore className="size-5" />
+                    Chat With Proctor
+                  </CardTitle>
+                  <CardDescription>
+                    Messages shown here are specific to you.
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary">Dummy</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col gap-4">
+              <div className="flex min-h-0 flex-1 flex-col gap-4">
+                <div className="bg-muted/30 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-xl border p-3">
+                  <div className="text-muted-foreground rounded-lg border bg-background px-4 py-3 text-xs leading-6">
+                    Replies here are private to this room. Socket wiring comes
+                    next; this panel is ready for that flow.
+                  </div>
+                  {chatMessages.map((message) => (
+                    <ChatBubble key={message.id} message={message} />
+                  ))}
+                </div>
+                <div className="rounded-xl border bg-background p-3">
+                  <div className="flex gap-2">
+                    <Input
+                      value={replyText}
+                      onChange={(event) => setReplyText(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault()
+                          handleSendReply()
+                        }
+                      }}
+                      placeholder="Reply to the proctor"
+                    />
+                    <Button onClick={handleSendReply} disabled={!replyText.trim()}>
+                      Send
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <MediaPermissionDialog
@@ -163,6 +284,39 @@ function StudentRoomPage() {
   )
 }
 
+type ChatMessage = {
+  id: string
+  sender: "proctor" | "student"
+  body: string
+  timestamp: string
+}
+
+function StatusPill({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof ShieldAlert
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-xl border bg-muted/30 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="bg-background flex size-10 items-center justify-center rounded-full border">
+          <Icon className="size-4" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-muted-foreground text-xs font-medium uppercase">
+            {label}
+          </div>
+          <div className="truncate text-sm">{value}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PreviewTile({
   label,
   stream,
@@ -177,7 +331,12 @@ function PreviewTile({
   return (
     <div className="overflow-hidden rounded-xl border bg-muted/30">
       <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="text-sm font-medium">{label}</div>
+        <div>
+          <div className="text-sm font-medium">{label}</div>
+          <div className="text-muted-foreground text-xs">
+            {stream ? "Live preview feed" : "Waiting for permission grant"}
+          </div>
+        </div>
         <Badge variant={stream ? "default" : "secondary"}>
           {stream ? "Connected" : "Awaiting permission"}
         </Badge>
@@ -188,13 +347,53 @@ function PreviewTile({
           autoPlay
           playsInline
           muted={muted}
-          className="aspect-video w-full bg-black object-cover"
+          className="aspect-[16/11] w-full bg-black object-cover"
         />
       ) : (
-        <div className="text-muted-foreground flex aspect-video items-center justify-center px-6 text-sm">
-          Stream preview appears here after permission is granted.
+        <div className="flex aspect-[16/11] flex-col items-center justify-center gap-3 px-6 text-center">
+          <div className="bg-background rounded-full border border-dashed p-4">
+            {label.includes("Screen") ? (
+              <Monitor className="text-muted-foreground size-6" />
+            ) : (
+              <Video className="text-muted-foreground size-6" />
+            )}
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Preview unavailable</div>
+            <div className="text-muted-foreground text-sm">
+              Stream preview appears here after permission is granted.
+            </div>
+          </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isStudentMessage = message.sender === "student"
+
+  return (
+    <div
+      className={`flex ${
+        isStudentMessage ? "justify-end" : "justify-start"
+      }`}
+    >
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+          isStudentMessage
+            ? "bg-primary text-primary-foreground"
+            : "bg-background border"
+        }`}
+      >
+        <div className="mb-1 flex items-center justify-between gap-3 text-[11px] opacity-75">
+          <span className="font-medium">
+            {isStudentMessage ? "You" : "Proctor"}
+          </span>
+          <span>{message.timestamp}</span>
+        </div>
+        <div>{message.body}</div>
+      </div>
     </div>
   )
 }
